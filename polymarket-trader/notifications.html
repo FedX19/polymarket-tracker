@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Polymarket Trader Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-card: rgba(15, 23, 42, 0.7);
+            --neon-cyan: #00f0ff;
+            --neon-purple: #b400ff;
+            --neon-pink: #ff006e;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --success: #00ff88;
+            --danger: #ff4444;
+            --warning: #ffaa00;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 20% 30%, rgba(180, 0, 255, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 70%, rgba(0, 240, 255, 0.15) 0px, transparent 50%);
+            background-size: 200% 200%;
+            animation: gradientShift 10s ease infinite;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                repeating-linear-gradient(0deg, rgba(0,240,255,0.03) 0px, transparent 1px, transparent 2px, rgba(0,240,255,0.03) 3px),
+                repeating-linear-gradient(90deg, rgba(180,0,255,0.03) 0px, transparent 1px, transparent 2px, rgba(180,0,255,0.03) 3px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .header .tagline {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 20px;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-indicator.live {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--success);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+        }
+
+        .status-indicator.live .status-dot {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(0, 240, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 240, 255, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-value.success {
+            background: linear-gradient(135deg, var(--success), var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-value.danger {
+            background: linear-gradient(135deg, var(--danger), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 240, 255, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), var(--neon-cyan));
+            color: var(--bg-dark);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), var(--neon-pink));
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 68, 68, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .wallet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .wallet-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-item:hover {
+            border-color: rgba(0, 240, 255, 0.3);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .wallet-info {
+            flex: 1;
+        }
+
+        .wallet-label {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn {
+            padding: 4px 8px;
+            font-size: 0.75em;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 4px;
+            color: var(--neon-cyan);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(0, 240, 255, 0.2);
+        }
+
+        .wallet-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .alert-log {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+
+        .alert-log::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .alert-log::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .alert-log::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .alert-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 12px;
+            border-left: 3px solid var(--neon-cyan);
+            margin-bottom: 12px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .alert-trader {
+            font-weight: 600;
+            color: var(--neon-cyan);
+        }
+
+        .alert-time {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+        }
+
+        .alert-market {
+            font-size: 1.05em;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .alert-details {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.9em;
+        }
+
+        .alert-detail {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .alert-detail .label {
+            color: var(--text-secondary);
+        }
+
+        .alert-detail .value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .alert-detail .value.buy {
+            color: var(--success);
+        }
+
+        .alert-detail .value.sell {
+            color: var(--danger);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.95), rgba(180, 0, 255, 0.95));
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: slideIn 0.5s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .toast-header {
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+
+        .toast-body {
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .notification-banner {
+            background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 68, 68, 0.2));
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notification-banner.success {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 240, 255, 0.2));
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            input[type="text"],
+            input[type="number"] {
+                min-width: 100%;
+            }
+            
+            .toast-container {
+                left: 20px;
+                right: 20px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 POLYMARKET TRADER TRACKER</h1>
+            <div class="tagline">Real-time Whale & Top Trader Alerts</div>
+            <div id="statusIndicator" class="status-indicator">
+                <span class="status-dot"></span>
+                <span id="statusText">IDLE</span>
+            </div>
+        </div>
+
+        <div id="notificationBanner" class="notification-banner hidden">
+            <span style="font-size: 1.5em;">⚠️</span>
+            <div style="flex: 1;">
+                <strong>Desktop Notifications Disabled</strong>
+                <p style="margin-top: 4px; font-size: 0.9em;">Enable notifications to receive alerts when traders place bets.</p>
+            </div>
+            <button class="btn btn-primary" onclick="requestNotificationPermission()">Enable Now</button>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-header">
+                <h2 class="card-title">⚡ LIVE STATS</h2>
+                <div style="font-size: 0.85em; color: var(--text-secondary);">
+                    <span id="lastCheckTime">Never</span>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Tracking</div>
+                    <div class="stat-value" id="trackingCount">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Alerts Today</div>
+                    <div class="stat-value success" id="alertsToday">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Total Signals</div>
+                    <div class="stat-value" id="totalAlerts">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">API Errors</div>
+                    <div class="stat-value danger" id="errorCount">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-header">
+                <h2 class="card-title">👥 TRADER PORTFOLIO</h2>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="walletInput" placeholder="Wallet Address (0x...)" />
+                <input type="text" id="labelInput" placeholder="Label (e.g., Whale #1)" />
+                <button class="btn btn-primary" onclick="addWallet()">Add Trader</button>
+            </div>
+
+            <div id="walletList" class="wallet-list">
+                <div class="empty-state">
+                    <div class="empty-state-icon">👻</div>
+                    <div>No traders in portfolio. Add some to start tracking!</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-header">
+                <h2 class="card-title">⚙️ CONFIGURATION</h2>
+            </div>
+
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label class="form-label">Check Interval</label>
+                    <select id="intervalSelect">
+                        <option value="30000">30 seconds (Aggressive)</option>
+                        <option value="60000" selected>1 minute (Balanced)</option>
+                        <option value="180000">3 minutes</option>
+                        <option value="300000">5 minutes</option>
+                        <option value="600000">10 minutes (Relaxed)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Minimum Bet (USDC)</label>
+                    <input type="number" id="minBetInput" placeholder="100" value="100" min="0" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Side Filter</label>
+                    <select id="sideFilter">
+                        <option value="BOTH">Both Buy & Sell</option>
+                        <option value="BUY">Only Buy</option>
+                        <option value="SELL">Only Sell</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Sound Alerts</label>
+                    <select id="soundEnabled">
+                        <option value="true" selected>Enabled</option>
+                        <option value="false">Disabled</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Discord Webhook URL (Optional)</label>
+                <input type="text" id="discordWebhook" placeholder="https://discord.com/api/webhooks/..." />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Alert Log Limit</label>
+                <input type="number" id="logLimit" value="500" min="50" max="2000" />
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-secondary" onclick="testSound()">Test Sound</button>
+                <button class="btn btn-secondary" onclick="testDiscord()">Test Discord</button>
+                <button class="btn btn-secondary" onclick="testNotification()">Test Alert</button>
+                <button class="btn btn-secondary" onclick="toggleDemoMode()">
+                    <span id="demoModeText">Enable Demo</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-header">
+                <h2 class="card-title">🎮 CONTROL PANEL</h2>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-success" id="startBtn" onclick="startMonitoring()">Start Monitoring</button>
+                <button class="btn btn-danger hidden" id="stopBtn" onclick="stopMonitoring()">Stop Monitoring</button>
+                <button class="btn btn-secondary" onclick="checkNow()">Check Now</button>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-header">
+                <h2 class="card-title">📋 SIGNAL LOG</h2>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85em;" onclick="exportJSON()">Export JSON</button>
+                    <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85em;" onclick="exportCSV()">Export CSV</button>
+                    <button class="btn btn-danger" style="padding: 8px 16px; font-size: 0.85em;" onclick="clearLog()">Clear Log</button>
+                </div>
+            </div>
+
+            <div id="alertLog" class="alert-log">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📡</div>
+                    <div>No signals yet. Start monitoring to detect trades!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+        let state = {
+            wallets: [],
+            settings: {
+                intervalMs: 60000,
+                minBet: 100,
+                soundEnabled: true,
+                discordWebhook: '',
+                sideFilter: 'BOTH',
+                demoMode: false,
+                logLimit: 500
+            },
+            lastSeen: {},
+            alerts: [],
+            stats: {
+                totalAlerts: 0,
+                alertsToday: 0,
+                errors: 0,
+                lastCheck: null
+            }
+        };
+
+        let monitoringInterval = null;
+        let isMonitoring = false;
+        let audioContext = null;
+
+        const API_BASE = 'https://data-api.polymarket.com';
+
+        function init() {
+            loadState();
+            renderAll();
+            checkNotificationPermission();
+            
+            ['intervalSelect', 'minBetInput', 'sideFilter', 'soundEnabled', 'discordWebhook', 'logLimit'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('change', () => {
+                        saveSettings();
+                    });
+                }
+            });
+
+            const now = new Date();
+            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            const msUntilMidnight = tomorrow - now;
+            setTimeout(() => {
+                state.stats.alertsToday = 0;
+                saveState();
+                renderStats();
+                setInterval(() => {
+                    state.stats.alertsToday = 0;
+                    saveState();
+                    renderStats();
+                }, 86400000);
+            }, msUntilMidnight);
+        }
+
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('polymarket_tracker_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed };
+                }
+            } catch (err) {
+                console.error('Failed to load state:', err);
+            }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem('polymarket_tracker_state', JSON.stringify(state));
+            } catch (err) {
+                console.error('Failed to save state:', err);
+            }
+        }
+
+        function saveSettings() {
+            state.settings.intervalMs = parseInt(document.getElementById('intervalSelect').value);
+            state.settings.minBet = parseFloat(document.getElementById('minBetInput').value) || 0;
+            state.settings.sideFilter = document.getElementById('sideFilter').value;
+            state.settings.soundEnabled = document.getElementById('soundEnabled').value === 'true';
+            state.settings.discordWebhook = document.getElementById('discordWebhook').value.trim();
+            state.settings.logLimit = parseInt(document.getElementById('logLimit').value) || 500;
+            saveState();
+        }
+
+        function renderAll() {
+            renderStats();
+            renderWalletList();
+            renderAlertLog();
+            renderSettings();
+        }
+
+        function renderStats() {
+            document.getElementById('trackingCount').textContent = state.wallets.length;
+            document.getElementById('alertsToday').textContent = state.stats.alertsToday;
+            document.getElementById('totalAlerts').textContent = state.stats.totalAlerts;
+            document.getElementById('errorCount').textContent = state.stats.errors;
+            
+            if (state.stats.lastCheck) {
+                const time = new Date(state.stats.lastCheck).toLocaleTimeString();
+                document.getElementById('lastCheckTime').textContent = `Last: ${time}`;
+            }
+        }
+
+        function renderWalletList() {
+            const container = document.getElementById('walletList');
+            
+            if (state.wallets.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👻</div>
+                        <div>No traders in portfolio. Add some to start tracking!</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = state.wallets.map((wallet, index) => {
+                const shortAddr = `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`;
+                return `
+                    <div class="wallet-item">
+                        <div class="wallet-info">
+                            <div class="wallet-label">${escapeHtml(wallet.label)}</div>
+                            <div class="wallet-address">
+                                ${shortAddr}
+                                <button class="copy-btn" onclick="copyAddress('${wallet.address}')">Copy</button>
+                            </div>
+                        </div>
+                        <div class="wallet-actions">
+                            <button class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.85em;" onclick="editWallet(${index})">Edit</button>
+                            <button class="btn btn-danger" style="padding: 8px 12px; font-size: 0.85em;" onclick="removeWallet(${index})">Remove</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSettings() {
+            document.getElementById('intervalSelect').value = state.settings.intervalMs;
+            document.getElementById('minBetInput').value = state.settings.minBet;
+            document.getElementById('sideFilter').value = state.settings.sideFilter;
+            document.getElementById('soundEnabled').value = state.settings.soundEnabled.toString();
+            document.getElementById('discordWebhook').value = state.settings.discordWebhook;
+            document.getElementById('logLimit').value = state.settings.logLimit;
+        }
+
+        function renderAlertLog() {
+            const container = document.getElementById('alertLog');
+            
+            if (state.alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📡</div>
+                        <div>No signals yet. Start monitoring to detect trades!</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = state.alerts.slice(0, 50).map(alert => {
+                const time = new Date(alert.timestamp).toLocaleString();
+                const sideClass = alert.side === 'BUY' ? 'buy' : 'sell';
+                
+                return `
+                    <div class="alert-item">
+                        <div class="alert-header">
+                            <span class="alert-trader">🎯 ${escapeHtml(alert.traderLabel)}</span>
+                            <span class="alert-time">${time}</span>
+                        </div>
+                        <div class="alert-market">${escapeHtml(alert.title)}</div>
+                        <div class="alert-details">
+                            <div class="alert-detail">
+                                <span class="label">Side:</span>
+                                <span class="value ${sideClass}">${alert.side}</span>
+                            </div>
+                            <div class="alert-detail">
+                                <span class="label">Outcome:</span>
+                                <span class="value">${escapeHtml(alert.outcome)}</span>
+                            </div>
+                            <div class="alert-detail">
+                                <span class="label">Size:</span>
+                                <span class="value">$${alert.usdcSize.toLocaleString()}</span>
+                            </div>
+                            <div class="alert-detail">
+                                <span class="label">Price:</span>
+                                <span class="value">${alert.price}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addWallet() {
+            const address = document.getElementById('walletInput').value.trim();
+            const label = document.getElementById('labelInput').value.trim() || `Trader ${state.wallets.length + 1}`;
+
+            if (!address) {
+                showToast('⚠️ Error', 'Please enter a wallet address');
+                return;
+            }
+
+            if (!address.match(/^0x[a-fA-F0-9]{40}$/)) {
+                showToast('⚠️ Invalid Address', 'Please enter a valid Ethereum address');
+                return;
+            }
+
+            if (state.wallets.some(w => w.address.toLowerCase() === address.toLowerCase())) {
+                showToast('⚠️ Duplicate', 'This wallet is already in your portfolio');
+                return;
+            }
+
+            state.wallets.push({ address, label });
+            state.lastSeen[address] = 0;
+            saveState();
+            renderAll();
+
+            document.getElementById('walletInput').value = '';
+            document.getElementById('labelInput').value = '';
+
+            showToast('✅ Added', `${label} added to portfolio`);
+        }
+
+        function removeWallet(index) {
+            if (!confirm('Remove this trader from your portfolio?')) return;
+            
+            const wallet = state.wallets[index];
+            delete state.lastSeen[wallet.address];
+            state.wallets.splice(index, 1);
+            saveState();
+            renderAll();
+            showToast('🗑️ Removed', 'Trader removed from portfolio');
+        }
+
+        function editWallet(index) {
+            const wallet = state.wallets[index];
+            const newLabel = prompt('Enter new label:', wallet.label);
+            if (newLabel && newLabel.trim()) {
+                wallet.label = newLabel.trim();
+                saveState();
+                renderWalletList();
+            }
+        }
+
+        function copyAddress(address) {
+            navigator.clipboard.writeText(address).then(() => {
+                showToast('📋 Copied', 'Address copied to clipboard');
+            });
+        }
+
+        async function startMonitoring() {
+            if (state.wallets.length === 0) {
+                showToast('⚠️ No Wallets', 'Add at least one trader to your portfolio');
+                return;
+            }
+
+            saveSettings();
+            
+            isMonitoring = true;
+            document.getElementById('startBtn').classList.add('hidden');
+            document.getElementById('stopBtn').classList.remove('hidden');
+            document.getElementById('statusIndicator').classList.add('live');
+            document.getElementById('statusText').textContent = 'LIVE';
+
+            await checkForNewBets();
+
+            monitoringInterval = setInterval(checkForNewBets, state.settings.intervalMs);
+            
+            showToast('🚀 Monitoring Started', 'Now tracking your trader portfolio');
+        }
+
+        function stopMonitoring() {
+            isMonitoring = false;
+            
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+            }
+
+            document.getElementById('startBtn').classList.remove('hidden');
+            document.getElementById('stopBtn').classList.add('hidden');
+            document.getElementById('statusIndicator').classList.remove('live');
+            document.getElementById('statusText').textContent = 'IDLE';
+
+            showToast('⏸️ Monitoring Stopped', 'Tracking paused');
+        }
+
+        async function checkNow() {
+            if (state.wallets.length === 0) {
+                showToast('⚠️ No Wallets', 'Add traders to your portfolio first');
+                return;
+            }
+            
+            showToast('🔍 Checking', 'Scanning for new trades...');
+            await checkForNewBets();
+        }
+
+        async function checkForNewBets() {
+            if (state.settings.demoMode) {
+                generateDemoAlert();
+                return;
+            }
+
+            state.stats.lastCheck = Date.now();
+            renderStats();
+
+            for (const wallet of state.wallets) {
+                try {
+                    await processWallet(wallet);
+                    await sleep(100);
+                } catch (err) {
+                    console.error(`Error processing ${wallet.address}:`, err);
+                    state.stats.errors++;
+                    saveState();
+                    renderStats();
+                }
+            }
+        }
+
+        async function processWallet(wallet) {
+            const activity = await getWalletActivity(wallet.address, 10);
+            if (!activity || activity.length === 0) return;
+
+            const trades = activity.filter(a => a.type === 'TRADE');
+            const lastSeen = state.lastSeen[wallet.address] || 0;
+
+            if (lastSeen === 0) {
+                const newestTimestamp = Math.max(...trades.map(t => t.timestamp));
+                state.lastSeen[wallet.address] = newestTimestamp;
+                saveState();
+                return;
+            }
+
+            const newTrades = trades.filter(t => t.timestamp > lastSeen);
+            
+            if (newTrades.length === 0) return;
+
+            newTrades.sort((a, b) => a.timestamp - b.timestamp);
+
+            for (const trade of newTrades) {
+                if (trade.usdcSize < state.settings.minBet) continue;
+                if (state.settings.sideFilter !== 'BOTH' && trade.side !== state.settings.sideFilter) continue;
+
+                await sendAlert(wallet, trade);
+            }
+
+            const newestTimestamp = Math.max(...trades.map(t => t.timestamp));
+            state.lastSeen[wallet.address] = newestTimestamp;
+            saveState();
+        }
+
+        async function getWalletActivity(address, limit = 10) {
+            try {
+                const url = `${API_BASE}/activity?user=${address}&limit=${limit}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                return await response.json();
+            } catch (err) {
+                console.error('API error:', err);
+                throw err;
+            }
+        }
+
+        async function sendAlert(wallet, trade) {
+            const alert = {
+                timestamp: Date.now(),
+                traderLabel: wallet.label,
+                traderAddress: wallet.address,
+                title: trade.title || 'Unknown Market',
+                outcome: trade.outcome || 'Unknown',
+                side: trade.side || 'UNKNOWN',
+                usdcSize: trade.usdcSize || 0,
+                price: trade.price || 0,
+                slug: trade.slug || ''
+            };
+
+            addAlert(alert);
+
+            await sendBrowserNotification(alert);
+
+            if (state.settings.soundEnabled) {
+                playBeep();
+            }
+
+            if (state.settings.discordWebhook) {
+                await sendDiscord(alert);
+            }
+
+            showAlertToast(alert);
+        }
+
+        function addAlert(alert) {
+            state.alerts.unshift(alert);
+            state.stats.totalAlerts++;
+            state.stats.alertsToday++;
+
+            if (state.alerts.length > state.settings.logLimit) {
+                state.alerts = state.alerts.slice(0, state.settings.logLimit);
+            }
+
+            saveState();
+            renderAll();
+        }
+
+        async function sendBrowserNotification(alert) {
+            if (Notification.permission !== 'granted') return;
+
+            try {
+                const notification = new Notification(`🚨 ${alert.traderLabel} placed a bet!`, {
+                    body: `${alert.title}\n${alert.side} ${alert.outcome} - $${alert.usdcSize.toLocaleString()}`,
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="75" font-size="75">📊</text></svg>',
+                    requireInteraction: true,
+                    tag: `polymarket-${alert.timestamp}`
+                });
+
+                notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                };
+            } catch (err) {
+                console.error('Notification error:', err);
+            }
+        }
+
+        function playBeep() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (err) {
+                console.error('Sound error:', err);
+            }
+        }
+
+        async function sendDiscord(alert) {
+            if (!state.settings.discordWebhook) return;
+
+            try {
+                const embed = {
+                    title: "🚨 New Trade Signal",
+                    color: alert.side === 'BUY' ? 0x00ff88 : 0xff4444,
+                    fields: [
+                        { name: "Trader", value: alert.traderLabel, inline: true },
+                        { name: "Market", value: alert.title, inline: false },
+                        { name: "Side", value: alert.side, inline: true },
+                        { name: "Outcome", value: alert.outcome, inline: true },
+                        { name: "Size", value: `$${alert.usdcSize.toLocaleString()}`, inline: true },
+                        { name: "Price", value: alert.price.toString(), inline: true }
+                    ],
+                    timestamp: new Date().toISOString(),
+                    footer: { text: "Polymarket Trader Tracker" }
+                };
+
+                await fetch(state.settings.discordWebhook, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ embeds: [embed] })
+                });
+            } catch (err) {
+                console.error('Discord webhook error:', err);
+            }
+        }
+
+        function showAlertToast(alert) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="toast-header">🚨 ${escapeHtml(alert.traderLabel)} - ${alert.side}</div>
+                <div class="toast-body">
+                    ${escapeHtml(alert.title)}<br>
+                    ${alert.outcome} - $${alert.usdcSize.toLocaleString()}
+                </div>
+            `;
+
+            const container = document.getElementById('toastContainer');
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(400px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        function checkNotificationPermission() {
+            if (!('Notification' in window)) {
+                document.getElementById('notificationBanner').innerHTML = `
+                    <span style="font-size: 1.5em;">⚠️</span>
+                    <div style="flex: 1;">
+                        <strong>Browser Notifications Not Supported</strong>
+                        <p style="margin-top: 4px; font-size: 0.9em;">Your browser doesn't support desktop notifications. You'll still receive in-app alerts.</p>
+                    </div>
+                `;
+                document.getElementById('notificationBanner').classList.remove('hidden');
+                return;
+            }
+
+            if (Notification.permission === 'denied') {
+                document.getElementById('notificationBanner').innerHTML = `
+                    <span style="font-size: 1.5em;">⚠️</span>
+                    <div style="flex: 1;">
+                        <strong>Notifications Blocked</strong>
+                        <p style="margin-top: 4px; font-size: 0.9em;">You've blocked notifications. Enable them in your browser settings to receive alerts.</p>
+                    </div>
+                `;
+                document.getElementById('notificationBanner').classList.remove('hidden');
+                return;
+            }
+
+            if (Notification.permission === 'default') {
+                document.getElementById('notificationBanner').classList.remove('hidden');
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                document.getElementById('notificationBanner').classList.add('hidden');
+            }
+        }
+
+        async function requestNotificationPermission() {
+            try {
+                const permission = await Notification.requestPermission();
+                checkNotificationPermission();
+                
+                if (permission === 'granted') {
+                    showToast('✅ Enabled', 'Desktop notifications are now active');
+                    new Notification('🎉 Notifications Enabled!', {
+                        body: 'You\'ll now receive alerts when traders place bets',
+                        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="75" font-size="75">📊</text></svg>'
+                    });
+                }
+            } catch (err) {
+                console.error('Permission error:', err);
+            }
+        }
+
+        function testSound() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            playBeep();
+            showToast('🔊 Sound Test', 'If you heard a beep, sound alerts are working!');
+        }
+
+        async function testDiscord() {
+            if (!state.settings.discordWebhook) {
+                showToast('⚠️ No Webhook', 'Enter a Discord webhook URL first');
+                return;
+            }
+
+            const testAlert = {
+                traderLabel: 'Test Trader',
+                title: 'Test Market',
+                side: 'BUY',
+                outcome: 'YES',
+                usdcSize: 1000,
+                price: 0.65
+            };
+
+            await sendDiscord(testAlert);
+            showToast('✅ Discord Test', 'Check your Discord channel for the test message');
+        }
+
+        function testNotification() {
+            const testAlert = {
+                timestamp: Date.now(),
+                traderLabel: 'Test Trader',
+                title: 'Will this notification system work?',
+                outcome: 'YES',
+                side: 'BUY',
+                usdcSize: 5000,
+                price: 0.75,
+                slug: 'test'
+            };
+
+            addAlert(testAlert);
+            sendBrowserNotification(testAlert);
+            if (state.settings.soundEnabled) playBeep();
+            showAlertToast(testAlert);
+            
+            showToast('✅ Test Alert', 'Check all notification channels!');
+        }
+
+        function toggleDemoMode() {
+            state.settings.demoMode = !state.settings.demoMode;
+            saveState();
+            
+            const btn = document.getElementById('demoModeText');
+            btn.textContent = state.settings.demoMode ? 'Disable Demo' : 'Enable Demo';
+            
+            showToast(
+                state.settings.demoMode ? '🎭 Demo Mode ON' : '🎭 Demo Mode OFF',
+                state.settings.demoMode ? 'Will generate fake alerts for testing' : 'Now using real API data'
+            );
+        }
+
+        function generateDemoAlert() {
+            const demoWallet = state.wallets[Math.floor(Math.random() * state.wallets.length)] || 
+                              { label: 'Demo Trader', address: '0x0000000000000000000000000000000000000000' };
+            
+            const markets = [
+                'Will Trump win 2024 election?',
+                'Will Bitcoin hit $100k in 2024?',
+                'Will there be a recession in 2024?',
+                'Will AI replace programmers by 2025?'
+            ];
+
+            const demoTrade = {
+                title: markets[Math.floor(Math.random() * markets.length)],
+                outcome: Math.random() > 0.5 ? 'YES' : 'NO',
+                side: Math.random() > 0.5 ? 'BUY' : 'SELL',
+                usdcSize: Math.floor(Math.random() * 10000) + 100,
+                price: (Math.random() * 0.8 + 0.1).toFixed(2),
+                slug: 'demo',
+                timestamp: Date.now() / 1000
+            };
+
+            sendAlert(demoWallet, demoTrade);
+        }
+
+        function exportJSON() {
+            const data = JSON.stringify(state.alerts, null, 2);
+            downloadFile(data, 'polymarket-alerts.json', 'application/json');
+            showToast('📥 Exported', 'Downloaded as JSON file');
+        }
+
+        function exportCSV() {
+            const headers = ['Timestamp', 'Trader', 'Market', 'Side', 'Outcome', 'Size (USDC)', 'Price'];
+            const rows = state.alerts.map(a => [
+                new Date(a.timestamp).toISOString(),
+                a.traderLabel,
+                a.title,
+                a.side,
+                a.outcome,
+                a.usdcSize,
+                a.price
+            ]);
+
+            const csv = [headers, ...rows]
+                .map(row => row.map(cell => `"${cell}"`).join(','))
+                .join('\n');
+
+            downloadFile(csv, 'polymarket-alerts.csv', 'text/csv');
+            showToast('📥 Exported', 'Downloaded as CSV file');
+        }
+
+        function clearLog() {
+            if (!confirm('Clear all alert history? This cannot be undone.')) return;
+            
+            state.alerts = [];
+            state.stats.totalAlerts = 0;
+            state.stats.alertsToday = 0;
+            saveState();
+            renderAll();
+            showToast('🗑️ Cleared', 'Alert log has been cleared');
+        }
+
+        function showToast(title, message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="toast-header">${escapeHtml(title)}</div>
+                <div class="toast-body">${escapeHtml(message)}</div>
+            `;
+
+            const container = document.getElementById('toastContainer');
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(400px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
